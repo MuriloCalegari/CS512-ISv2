@@ -2,8 +2,8 @@ package edu.duke.cs.is_v2;
 
 import com.google.common.hash.Hashing;
 import edu.duke.cs.is_v2.exception.UnusedHashNotFoundException;
+import edu.duke.cs.is_v2.zookeeper.ZooKeeperClient;
 import lombok.extern.log4j.Log4j2;
-import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -17,7 +17,7 @@ public class UrlAccessor {
     int LIMIT = 10;
 
     @Autowired
-    private CuratorFramework curatorFramework;
+    private ZooKeeperClient zkClient;
 
     @Autowired
     private StateAccessor stateAccessor;
@@ -27,9 +27,10 @@ public class UrlAccessor {
         int n = 0;
 
         while (n < LIMIT) {
-            String shortenedUrl = hash(url, n, stateAccessor.getCurrentHashLength());
+            int length = stateAccessor.getCurrentHashLength();
+            String shortenedUrl = hash(url, n, length);
             if (atomicCheckAndPersist(shortenedUrl, url)) {
-                stateAccessor.incrementCountForLength(shortenedUrl.length());
+                stateAccessor.incrementCountForLength(length);
                 return shortenedUrl;
             }
             n++;
@@ -45,10 +46,9 @@ public class UrlAccessor {
     private boolean atomicCheckAndPersist(String shortenedUrl, String originalUrl) {
         try {
             String path = "/urls/" + shortenedUrl;
-            curatorFramework
+            zkClient.getCurator()
                     .create()
                     .creatingParentsIfNeeded()
-                    .withProtection()
                     .forPath(path, originalUrl.getBytes());
 
             return true;
@@ -65,7 +65,7 @@ public class UrlAccessor {
     public String getOriginalUrl(String shortenedUrl) {
         try {
             String path = "/urls/" + shortenedUrl;
-            byte[] data = curatorFramework.getData().forPath(path);
+            byte[] data = zkClient.getCurator().getData().forPath(path);
             return new String(data);
         } catch (KeeperException.NoNodeException e) {
             return null;

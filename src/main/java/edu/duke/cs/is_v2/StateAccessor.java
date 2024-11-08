@@ -1,5 +1,6 @@
 package edu.duke.cs.is_v2;
 
+import edu.duke.cs.is_v2.zookeeper.ZooKeeperClient;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.shared.SharedCount;
 import org.apache.curator.framework.recipes.shared.VersionedValue;
@@ -11,16 +12,46 @@ import org.springframework.stereotype.Component;
 public class StateAccessor {
 
     @Autowired
-    private CuratorFramework curatorFramework;
+    private ZooKeeperClient zkClient;
+
+    // Set up constructor
+    public StateAccessor(ZooKeeperClient zkClient) {
+        this.zkClient = zkClient;
+
+//        initializeNodes();
+    }
+
+    private void initializeNodes() {
+        String path = "/state/hashLength";
+        String path2 = "/state/count/" + 1;
+        try {
+            if(zkClient.getCurator().checkExists().forPath(path) == null) {
+                zkClient.getCurator().create().creatingParentsIfNeeded().forPath(path, "1".getBytes());
+            }
+            if(zkClient.getCurator().checkExists().forPath(path2) == null) {
+                zkClient.getCurator().create().creatingParentsIfNeeded().forPath(path2, "0".getBytes());
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public int getCurrentHashLength() {
         String path = "/state/hashLength";
 
+        SharedCount sharedCount = new SharedCount(zkClient.getCurator(), path, 1);
+
         try {
-            byte[] data = curatorFramework.getData().forPath(path);
-            return Integer.parseInt(new String(data));
+            sharedCount.start();
+            return sharedCount.getCount();
         } catch (Exception e) {
             throw new RuntimeException(e);
+        } finally {
+            try {
+                sharedCount.close();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -38,7 +69,7 @@ public class StateAccessor {
 
     private boolean increment(String path) {
         // TODO run on separate, detached thread
-        SharedCount sharedCount = new SharedCount(curatorFramework, path, 0);
+        SharedCount sharedCount = new SharedCount(zkClient.getCurator(), path, 0);
 
         try {
             sharedCount.start();

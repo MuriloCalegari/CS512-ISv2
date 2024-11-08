@@ -8,13 +8,9 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class Curator {
-
     @Bean
-    public CuratorFramework curatorFramework() {
-        CuratorFramework client = CuratorFrameworkFactory.newClient(
-                "localhost:2181", new ExponentialBackoffRetry(1000, 3)
-        );
-        client.start();
-        return client;
+    public ZooKeeperClient zooKeeperClient() {
+        // TODO Dynamically retrieve
+        return new ZooKeeperClient("localhost:2181");
     }
 }

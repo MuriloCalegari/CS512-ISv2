@@ -1,8 +1,19 @@
 version: '3.8'
 
 services:
+  coordinator:
+    image: zookeeper:3.7
+    hostname: coordinator
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: "server.1=coordinator:2888:3888;2181"
+    ports:
+      - "2181:2181"
+
   url-shortener:
     build: .
+    depends_on:
+      - coordinator
     ports:
       - "8080:8080"
     environment:
