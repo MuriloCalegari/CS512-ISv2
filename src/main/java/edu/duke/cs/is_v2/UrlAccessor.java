@@ -32,11 +32,13 @@ public class UrlAccessor {
         while (n < LIMIT * 10) {
             int length = stateAccessor.getCurrentHashLength();
             String shortenedUrl = hash(url, (int) (Math.random() * Integer.MAX_VALUE), length);
+
             if (atomicCheckAndPersist(shortenedUrl, url)) {
                 stateAccessor.incrementCountForLength(length);
                 log.debug("Generated URL after {} attempts: {}", n + 1, shortenedUrl);
                 return new UrlAttemptsPair(shortenedUrl, n + 1);
             }
+
             n++;
         }
 

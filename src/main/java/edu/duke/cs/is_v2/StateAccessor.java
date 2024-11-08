@@ -6,15 +6,15 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.curator.framework.recipes.atomic.AtomicValue;
 import org.apache.curator.framework.recipes.atomic.DistributedAtomicLong;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
-import org.apache.curator.framework.recipes.shared.SharedCount;
-import org.apache.curator.framework.recipes.shared.VersionedValue;
-import org.apache.zookeeper.ZooKeeper;
 import org.springframework.stereotype.Component;
 import com.google.common.cache.Cache;
 
 import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Component
 @Log4j2
@@ -23,7 +23,8 @@ public class StateAccessor {
     public static final String HASH_LENGTH = "/state/hashLength";
     private final ZooKeeperClient zkClient;
 
-    private final Cache<String, Integer> hashLengthCache;
+    // Used mainly for the hashLength value
+    private final Cache<String, Integer> cache;
 
     public static int LIMIT = 10;
 
@@ -32,12 +33,13 @@ public class StateAccessor {
 
         initialize();
 
-        this.hashLengthCache = CacheBuilder.newBuilder()
+        this.cache = CacheBuilder.newBuilder()
                 .expireAfterWrite(10, TimeUnit.SECONDS)
                 .build();
 
         log.debug("StateAccessor initialized");
         new Thread(this::hashLengthIncrementerHandler).start();
+        new Thread(this::accumulateIncrements).start();
     }
 
     private void initialize() {
@@ -60,11 +62,11 @@ public class StateAccessor {
     public int getCurrentHashLength(boolean forceRefresh) {
 
         if (forceRefresh) {
-            hashLengthCache.invalidate(HASH_LENGTH);
+            cache.invalidate(HASH_LENGTH);
         }
 
         try {
-            return hashLengthCache.get(HASH_LENGTH, () -> {
+            return cache.get(HASH_LENGTH, () -> {
                 DistributedAtomicLong atomicLong = new DistributedAtomicLong(
                         zkClient.getCurator(),
                         HASH_LENGTH,
@@ -100,17 +102,10 @@ public class StateAccessor {
             while (true) {
                 if (leaderLatch.hasLeadership()) {
                     log.debug("We're the leader now");
-                    int currentHashLength = getCurrentHashLength();
-                    int currentCount = getCountForLength(currentHashLength);
-
-                    double totalPossibleHashes = Math.pow(LETTER_OR_DIGIT_COUNT, currentHashLength);
-                    double collisionProbabilityForOneAttempt = currentCount / totalPossibleHashes;
-
-                    // Compute the probability of not finding a collision over LIMIT attempts
-                    double probOfFindingAnUnusedHash = 1 - Math.pow(collisionProbabilityForOneAttempt, LIMIT);
+                    double probOfFindingAnUnusedHash = probabilityFindingUnusedHash();
 
                     if (probOfFindingAnUnusedHash < COLLISION_PROBABILITY_THRESHOLD) {
-                        log.info("Incrementing hash length to from {} to {}", currentHashLength, currentHashLength + 1);
+                        log.info("Incrementing hash length to from {} to {}", getCurrentHashLength(), getCurrentHashLength() + 1);
                         incrementHashLength();
                     } else {
                         log.info("Probability was still at {} which is above the threshold of {}", probOfFindingAnUnusedHash, COLLISION_PROBABILITY_THRESHOLD);
@@ -125,24 +120,31 @@ public class StateAccessor {
         }
     }
 
-    private boolean incrementHashLength() {
-        String path = "/state/hashLength";
+    private double probabilityFindingUnusedHash() {
+        int currentCount = getCountForLength(getCurrentHashLength());
 
-        boolean increment = increment(path);
+        double totalPossibleHashes = Math.pow(LETTER_OR_DIGIT_COUNT, getCurrentHashLength());
+        double collisionProbabilityForOneAttempt = currentCount / totalPossibleHashes;
 
-        hashLengthCache.invalidate(path);
+        // Compute the probability of not finding a collision over LIMIT attempts
+        return 1 - Math.pow(collisionProbabilityForOneAttempt, LIMIT);
+    }
 
-        return increment;
+    private void incrementHashLength() {
+        incrementSync(HASH_LENGTH);
+        cache.invalidate(HASH_LENGTH);
     }
 
     public void incrementCountForLength(int n) {
-        String path = "/state/count/" + n;
+        incrementAsync(countPath(n));
+    }
 
-        increment(path);
+    private static String countPath(int n) {
+        return "/state/count/" + n;
     }
 
     private int getCountForLength(int n) {
-        String path = "/state/count/" + n;
+        String path = countPath(n);
         DistributedAtomicLong atomicLong = new DistributedAtomicLong(
                 zkClient.getCurator(),
                 path,
@@ -160,15 +162,16 @@ public class StateAccessor {
         }
     }
 
-    private boolean increment(String path) {
-        // TODO run on a separate thread
+    private final Lock counterLock = new ReentrantLock(true);
+    private final ConcurrentHashMap<String, Long> localCounters = new ConcurrentHashMap<>();
+
+    private boolean incrementSync(String path) {
         DistributedAtomicLong atomicLong = new DistributedAtomicLong(
                 zkClient.getCurator(),
                 path,
                 zkClient.getCurator().getZookeeperClient().getRetryPolicy());
 
         boolean updatePending = true;
-
         while (updatePending) {
             try {
                 AtomicValue<Long> result = atomicLong.increment();
@@ -177,8 +180,53 @@ public class StateAccessor {
                 throw new RuntimeException(e);
             }
         }
-
         return true;
+    }
+
+    private boolean incrementAsync(String path) {
+        counterLock.lock();
+        try {
+            localCounters.put(path, localCounters.getOrDefault(path, 0L) + 1);
+        } finally {
+            counterLock.unlock();
+        }
+        return true;
+    }
+
+    private void accumulateIncrements() {
+        while (true) {
+            try {
+                Thread.sleep(Duration.ofSeconds(1));
+                counterLock.lock();
+                try {
+                    for (String path : localCounters.keySet()) {
+                        long incrementsToApply = localCounters.get(path);
+                        if (incrementsToApply > 0) {
+                            localCounters.put(path, 0L);
+                            DistributedAtomicLong atomicLong = new DistributedAtomicLong(
+                                    zkClient.getCurator(),
+                                    path,
+                                    zkClient.getCurator().getZookeeperClient().getRetryPolicy());
+
+                            boolean updatePending = true;
+                            while (updatePending) {
+                                try {
+                                    AtomicValue<Long> result = atomicLong.add(incrementsToApply);
+                                    updatePending = !result.succeeded();
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }
+                        }
+                    }
+                } finally {
+                    counterLock.unlock();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            }
+        }
     }
 
 }
