@@ -7,7 +7,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.zookeeper.CreateMode;
-import org.springframework.stereotype.Component;
 
 import static edu.duke.cs.is_v2.zookeeper.DynamicEnsembleProvider.ENSEMBLE_PATH;
 
@@ -33,6 +32,7 @@ public class ZooKeeperClient {
         registerMember("localhost:2181");
 
         // Start a thread that updates the ensemble every 30 seconds
+        // TODO add a watch instead
         new Thread(() -> {
             while (true) {
                 try {
@@ -46,6 +46,8 @@ public class ZooKeeperClient {
                 }
             }
         }).start();
+
+
     }
 
     public void registerMember(String memberAddress) {

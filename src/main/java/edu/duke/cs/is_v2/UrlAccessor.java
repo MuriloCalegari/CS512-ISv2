@@ -9,12 +9,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
+import org.apache.commons.lang3.RandomStringUtils;
+
+import static edu.duke.cs.is_v2.StateAccessor.LIMIT;
 
 @Log4j2
 @Component
 public class UrlAccessor {
-
-    int LIMIT = 10;
 
     @Autowired
     private ZooKeeperClient zkClient;
@@ -22,16 +23,19 @@ public class UrlAccessor {
     @Autowired
     private StateAccessor stateAccessor;
 
-    public String generateShortened(String url) throws UnusedHashNotFoundException {
+    public record UrlAttemptsPair(String url, int attempts) {}
+
+    public UrlAttemptsPair generateShortened(String url) throws UnusedHashNotFoundException {
 
         int n = 0;
 
-        while (n < LIMIT) {
+        while (n < LIMIT * 10) {
             int length = stateAccessor.getCurrentHashLength();
-            String shortenedUrl = hash(url, n, length);
+            String shortenedUrl = hash(url, (int) (Math.random() * Integer.MAX_VALUE), length);
             if (atomicCheckAndPersist(shortenedUrl, url)) {
                 stateAccessor.incrementCountForLength(length);
-                return shortenedUrl;
+                log.debug("Generated URL after {} attempts: {}", n + 1, shortenedUrl);
+                return new UrlAttemptsPair(shortenedUrl, n + 1);
             }
             n++;
         }
@@ -75,12 +79,6 @@ public class UrlAccessor {
     }
 
     private String hash(String url, int n, int length) {
-        String input = url + n;
-
-        String sha256hex = Hashing.sha256()
-                .hashString(input, StandardCharsets.UTF_8)
-                .toString();
-
-        return sha256hex.substring(0, length);
+        return RandomStringUtils.randomAlphanumeric(length);
     }
 }
