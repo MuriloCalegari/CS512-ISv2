@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 import com.google.common.cache.Cache;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -166,6 +168,10 @@ public class StateAccessor {
     private final ConcurrentHashMap<String, Long> localCounters = new ConcurrentHashMap<>();
 
     private boolean incrementSync(String path) {
+        return addSync(path, 1L);
+    }
+
+    private boolean addSync(String path, Long value) {
         DistributedAtomicLong atomicLong = new DistributedAtomicLong(
                 zkClient.getCurator(),
                 path,
@@ -174,7 +180,7 @@ public class StateAccessor {
         boolean updatePending = true;
         while (updatePending) {
             try {
-                AtomicValue<Long> result = atomicLong.increment();
+                AtomicValue<Long> result = atomicLong.add(value);
                 updatePending = !result.succeeded();
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -197,35 +203,29 @@ public class StateAccessor {
         while (true) {
             try {
                 Thread.sleep(Duration.ofSeconds(1));
-                counterLock.lock();
-                try {
-                    for (String path : localCounters.keySet()) {
-                        long incrementsToApply = localCounters.get(path);
-                        if (incrementsToApply > 0) {
-                            localCounters.put(path, 0L);
-                            DistributedAtomicLong atomicLong = new DistributedAtomicLong(
-                                    zkClient.getCurator(),
-                                    path,
-                                    zkClient.getCurator().getZookeeperClient().getRetryPolicy());
-
-                            boolean updatePending = true;
-                            while (updatePending) {
-                                try {
-                                    AtomicValue<Long> result = atomicLong.add(incrementsToApply);
-                                    updatePending = !result.succeeded();
-                                } catch (Exception e) {
-                                    throw new RuntimeException(e);
-                                }
-                            }
-                        }
-                    }
-                } finally {
-                    counterLock.unlock();
-                }
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
                 throw new RuntimeException(e);
             }
+
+            Map<String, Long> mapCopy;
+
+            try {
+                counterLock.lock();
+                mapCopy = new HashMap<>(localCounters);
+                localCounters.clear();
+            } finally {
+                counterLock.unlock();
+            }
+
+            if(mapCopy.isEmpty()) {
+                continue;
+            }
+
+            mapCopy.forEach((path, incrementsToApply) -> {
+                if (incrementsToApply > 0) {
+                    addSync(path, incrementsToApply);
+                }
+            });
         }
     }
 
