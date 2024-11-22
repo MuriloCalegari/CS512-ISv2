@@ -74,8 +74,10 @@ public class UrlAccessor {
             byte[] data = zkClient.getCurator().getData().forPath(path);
             return new String(data);
         } catch (KeeperException.NoNodeException e) {
+            log.warn("Shortened URL not found in ZooKeeper: {}", shortenedUrl);
             return null;
         } catch (Exception e) {
+            log.error("Error accessing ZooKeeper for {}: {}", shortenedUrl, e.getMessage());
             throw new RuntimeException(e);
         }
     }
