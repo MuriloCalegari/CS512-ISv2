@@ -8,9 +8,9 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class Curator {
-    @Bean
-    public ZooKeeperClient zooKeeperClient() {
-        // TODO Dynamically retrieve
-        return new ZooKeeperClient("localhost:2181");
-    }
+//    @Bean
+//    public ZooKeeperClient zooKeeperClient() {
+//        // TODO Dynamically retrieve
+//        return new ZooKeeperClient();
+//    }
 }

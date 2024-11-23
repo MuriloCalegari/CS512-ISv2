@@ -6,6 +6,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.curator.framework.recipes.atomic.AtomicValue;
 import org.apache.curator.framework.recipes.atomic.DistributedAtomicLong;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import com.google.common.cache.Cache;
 
@@ -30,6 +31,7 @@ public class StateAccessor {
 
     public static int LIMIT = 10;
 
+    @Autowired
     public StateAccessor(ZooKeeperClient zkClient) {
         this.zkClient = zkClient;
 
@@ -110,7 +112,7 @@ public class StateAccessor {
                         log.info("Incrementing hash length to from {} to {}", getCurrentHashLength(), getCurrentHashLength() + 1);
                         incrementHashLength();
                     } else {
-                        log.info("Probability was still at {} which is above the threshold of {}", probOfFindingAnUnusedHash, COLLISION_PROBABILITY_THRESHOLD);
+                        log.debug("Probability was still at {} which is above the threshold of {}", probOfFindingAnUnusedHash, COLLISION_PROBABILITY_THRESHOLD);
                     }
                 }
 

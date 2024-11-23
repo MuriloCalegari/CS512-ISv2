@@ -1,20 +1,59 @@
 version: '3.8'
 
 services:
-  coordinator:
+  coordinator1:
     image: zookeeper:3.7
-    hostname: coordinator
+    hostname: coordinator1
     environment:
       ZOO_MY_ID: 1
-      ZOO_SERVERS: "server.1=coordinator:2888:3888;2181"
+#      Enable reconfig feature
+      ZOO_SERVERS: "server.1=vcm-43196.vm.duke.edu:2888:3888;2181 server.2=vcm-43196.vm.duke.edu:2889:3889;2182"
+      ZOO_CFG_EXTRA: "reconfigEnabled=true standaloneEnabled=false"
+#    extra_hosts:
+#        - "vcm-43196.vm.duke.edu:127.0.0.1"
     ports:
-      - "2181:2181"
+      - "2181:2181"  # Client port
+      - "2888:2888"  # Leader election port
+      - "3888:3888"  # Follower port
+    network_mode: host
+
+
+  coordinator2:
+    image: zookeeper:3.7
+    hostname: coordinator2
+    environment:
+      ZOO_MY_ID: 2
+      #      Enable reconfig feature
+      ZOO_SERVERS: "server.1=vcm-43196.vm.duke.edu:2888:3888;2181 server.2=vcm-43196.vm.duke.edu:2889:3889;2182"
+      ZOO_CFG_EXTRA: "reconfigEnabled=true standaloneEnabled=false"
+#    extra_hosts:
+#      - "vcm-43196.vm.duke.edu:127.0.0.1"
+    ports:
+      - "2182:2181"  # Client port
+      - "2889:2888"  # Leader election port
+      - "3889:3888"  # Follower port
+    network_mode: host
+
+  follower:
+    image: zookeeper:3.7
+    hostname: follower
+    environment:
+      ZOO_CFG_EXTRA: "reconfigEsnabled=true standaloneEnabled=false"
+    ports:
+      - "2182:2181"  # Client port
+      - "2889:2888"  # Leader election port
+      - "3889:3888"  # Follower port
+    network_mode: host
 
   url-shortener:
     build: .
     depends_on:
-      - coordinator
+      - coordinator1
+      - coordinator2
     ports:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=default
+
+#networks:
+#  zk_net:

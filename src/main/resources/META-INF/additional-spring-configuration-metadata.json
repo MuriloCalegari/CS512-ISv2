@@ -1,0 +1,18 @@
+{
+  "properties": [
+    {
+      "name": "server.network-interface",
+      "type": "java.lang.String",
+      "description": "The network interface to bind to."
+    },
+    {
+      "name": "zookeeper.coordinator.address",
+      "type": "java.lang.String",
+      "description": "The address of the Zookeeper coordinator, with a port number."
+    },
+    {
+      "name": "zookeeper.port",
+      "type": "java.lang.String",
+      "description": "The port used by this machine's Zookeeper instance."
+    }
+  ] }
