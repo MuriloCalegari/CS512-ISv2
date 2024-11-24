@@ -39,6 +39,18 @@ public class UrlAccessor {
                 return new UrlAttemptsPair(shortenedUrl, n + 1);
             }
 
+            if(n >= 5 * LIMIT) {
+                if(n == 5 * LIMIT) {
+                    log.warn("We haven't been able to generate a unique shortened URL for {} after {} attempts. So we're adding some jitter", url, n);
+                }
+                // Backoff from 10ms to 1000ms, linearly to n, plus some jitter
+                try {
+                    Thread.sleep(20 * (n - 5L * LIMIT) + (int) (Math.random() * 50));
+                } catch (InterruptedException e) {
+                    log.error("Thread interrupted", e);
+                }
+            }
+
             n++;
         }
 

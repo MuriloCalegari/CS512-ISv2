@@ -6,6 +6,7 @@ import lombok.extern.log4j.Log4j2;
 import org.apache.curator.framework.recipes.atomic.AtomicValue;
 import org.apache.curator.framework.recipes.atomic.DistributedAtomicLong;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
+import org.apache.zookeeper.Watcher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import com.google.common.cache.Cache;
@@ -44,6 +45,18 @@ public class StateAccessor {
         log.debug("StateAccessor initialized");
         new Thread(this::hashLengthIncrementerHandler).start();
         new Thread(this::accumulateIncrements).start();
+
+        // Setup watch on hash length, so we invalidate the cache when it changes
+        try {
+            zkClient.getCurator().getData().usingWatcher((Watcher) event -> {
+                if (event.getType() == Watcher.Event.EventType.NodeDataChanged) {
+                    log.info("Hash length changed, invalidating cache");
+                    cache.invalidate(HASH_LENGTH);
+                }
+            }).forPath(HASH_LENGTH);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void initialize() {
@@ -105,7 +118,6 @@ public class StateAccessor {
 
             while (true) {
                 if (leaderLatch.hasLeadership()) {
-                    log.debug("We're the leader now");
                     double probOfFindingAnUnusedHash = probabilityFindingUnusedHash();
 
                     if (probOfFindingAnUnusedHash < COLLISION_PROBABILITY_THRESHOLD) {

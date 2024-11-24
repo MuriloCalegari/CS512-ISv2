@@ -37,6 +37,7 @@ public class UrlShortenerController {
         try {
             String originalUrl = urlAccessor.getOriginalUrl(shortenedUrl);
             if (originalUrl != null) {
+                // Redirect user
                 return ResponseEntity.status(302).location(URI.create(originalUrl)).build();
             } else {
                 log.warn("Shortened URL not found: {}", shortenedUrl);

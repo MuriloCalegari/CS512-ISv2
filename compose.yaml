@@ -4,6 +4,7 @@ services:
   coordinator1:
     image: zookeeper:3.7
     hostname: coordinator1
+    restart: always
     environment:
       ZOO_MY_ID: 1
 #      Enable reconfig feature
@@ -21,6 +22,7 @@ services:
   coordinator2:
     image: zookeeper:3.7
     hostname: coordinator2
+    restart: always
     environment:
       ZOO_MY_ID: 2
       #      Enable reconfig feature
@@ -37,6 +39,7 @@ services:
   follower:
     image: zookeeper:3.7
     hostname: follower
+    restart: always
     environment:
       ZOO_MY_ID: ${node_id}
       ZOO_SERVERS: "server.1=vcm-43196.vm.duke.edu:2888:3888;2181 server.2=vcm-43196.vm.duke.edu:2889:3889;2182 server.${node_id}=${node_address}:2888:3888:observer;2181"
@@ -52,6 +55,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    restart: always
     ports:
       - "10000:10000"
     environment:
