@@ -1,18 +1,18 @@
 {
   "properties": [
     {
-      "name": "server.network-interface",
+      "name": "server.network_interface",
       "type": "java.lang.String",
       "description": "The network interface to bind to."
     },
     {
-      "name": "zookeeper.coordinator.address",
+      "name": "zookeeper.coordinator_address",
       "type": "java.lang.String",
       "description": "The address of the Zookeeper coordinator, with a port number."
     },
     {
-      "name": "zookeeper.port",
+      "name": "zookeeper.server_to_manage",
       "type": "java.lang.String",
-      "description": "The port used by this machine's Zookeeper instance."
+      "description": "The Zookeeper server this Spring Boot is managing."
     }
   ] }

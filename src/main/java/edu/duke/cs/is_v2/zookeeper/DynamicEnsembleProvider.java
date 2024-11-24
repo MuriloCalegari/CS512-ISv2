@@ -52,15 +52,21 @@ public class DynamicEnsembleProvider implements EnsembleProvider {
             for (String nodeName : ensembleNodeNames) {
                 String nodeData = new String(coordinatorClient.getData().forPath(ENSEMBLE_PATH + "/" + nodeName));
                 String[] parts = nodeData.split(":");
-//                Node node = new Node(parts[0], Integer.parseInt(parts[1]));
-                Node node = new Node(parts[0]);
-                updatedNodes.add(node);
+
+                // TODO dynamically retrieve or genetare Id
+                Node node = new Node(3, parts[0]);
+
+                // Make sure that the List contains no duplicates
+                // Sometimes ZK hasn't deleted the ephemeral node yet
+                if (!updatedNodes.contains(node)) {
+                    updatedNodes.add(node);
+                }
             }
 
             // Add the coordinator itself to the ensemble
             // TODO dynamically retrieve ports
-            updatedNodes.add(new Node(coordinatorAddress.split(":")[0], 2181, 2888, 3888));
-            updatedNodes.add(new Node(coordinatorAddress.split(":")[0], 2182, 2889, 3889));
+            updatedNodes.add(new Node(1, coordinatorAddress.split(":")[0], 2181, 2888, 3888));
+            updatedNodes.add(new Node(2, coordinatorAddress.split(":")[0], 2182, 2889, 3889));
 
             ensembleNodes = updatedNodes;
             log.info("Updated ensemble nodes: {}", ensembleNodes);

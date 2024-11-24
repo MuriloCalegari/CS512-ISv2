@@ -29,16 +29,9 @@ public class ZooKeeperClient {
 
     private final CuratorFramework curator;
 
-    @Value("${zookeeper.coordinator-address}")
-    private String coordinatorAddress;
-
-    @Value("${server.network-interface}")
-    private String networkInterface;
-
     @Autowired
-    public ZooKeeperClient(@Value("${zookeeper.coordinator-address}") String coordinatorAddress,
-                           @Value("${server.network-interface}") String networkInterface,
-                           @Value("${zookeeper.port}") String port) {
+    public ZooKeeperClient(@Value("${zookeeper.coordinator_address}") String coordinatorAddress,
+                           @Value("${zookeeper.server_to_manage}") String zookeeperServer) {
         // Initialize Curator with DynamicEnsembleProvider
 
         DynamicEnsembleProvider ensembleProvider = new DynamicEnsembleProvider(coordinatorAddress);
@@ -71,7 +64,7 @@ public class ZooKeeperClient {
             throw new RuntimeException(e);
         }
 
-        registerThisMachine(networkInterface, port);
+        registerMember(zookeeperServer);
     }
 
 //Specifying the client port
@@ -88,7 +81,7 @@ public class ZooKeeperClient {
         return nodes.stream()
                 .map(node ->
                         "server.%d=%s:%d:%d:participant;%d".formatted(
-                                nodes.indexOf(node) + 1,
+                                node.id(),
                                 node.address(),
                                 node.quorumPort(),
                                 node.leaderElectionPort(),

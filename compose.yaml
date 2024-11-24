@@ -8,7 +8,7 @@ services:
       ZOO_MY_ID: 1
 #      Enable reconfig feature
       ZOO_SERVERS: "server.1=vcm-43196.vm.duke.edu:2888:3888;2181 server.2=vcm-43196.vm.duke.edu:2889:3889;2182"
-      ZOO_CFG_EXTRA: "reconfigEnabled=true standaloneEnabled=false"
+      ZOO_CFG_EXTRA: "reconfigEnabled=true standaloneEnabled=false skipACL=yes"
 #    extra_hosts:
 #        - "vcm-43196.vm.duke.edu:127.0.0.1"
     ports:
@@ -25,7 +25,7 @@ services:
       ZOO_MY_ID: 2
       #      Enable reconfig feature
       ZOO_SERVERS: "server.1=vcm-43196.vm.duke.edu:2888:3888;2181 server.2=vcm-43196.vm.duke.edu:2889:3889;2182"
-      ZOO_CFG_EXTRA: "reconfigEnabled=true standaloneEnabled=false"
+      ZOO_CFG_EXTRA: "reconfigEnabled=true standaloneEnabled=false skipACL=yes"
 #    extra_hosts:
 #      - "vcm-43196.vm.duke.edu:127.0.0.1"
     ports:
@@ -38,11 +38,14 @@ services:
     image: zookeeper:3.7
     hostname: follower
     environment:
-      ZOO_CFG_EXTRA: "reconfigEsnabled=true standaloneEnabled=false"
+      ZOO_MY_ID: 3
+      ZOO_SERVERS: "server.1=vcm-43196.vm.duke.edu:2888:3888;2181 server.2=vcm-43196.vm.duke.edu:2889:3889;2182 server.3=vcm-44535.vm.duke.edu:2888:3888:observer;2181"
+      ZOO_CFG_EXTRA: "reconfigEnabled=true standaloneEnabled=false skipACL=yes"
+#      Set this follower as an observer
     ports:
-      - "2182:2181"  # Client port
-      - "2889:2888"  # Leader election port
-      - "3889:3888"  # Follower port
+      - "2181:2181"  # Client port
+      - "2888:2888"  # Leader election port
+      - "3888:3888"  # Follower port
     network_mode: host
 
   url-shortener:
