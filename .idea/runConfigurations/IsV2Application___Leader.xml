@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="IsV2Application - Leader" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <option name="ALTERNATIVE_JRE_PATH" value="openjdk-21" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <envs>
+      <env name="node_address" value="vcm-44535.vm.duke.edu" />
+      <env name="node_id" value="3" />
+      <env name="is_leader" value="true" />
+    </envs>
+    <module name="is-v2.main" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="edu.duke.cs.is_v2.IsV2Application" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

@@ -66,7 +66,7 @@ public class ZooKeeperClient {
 
         // We don't need to register the leader
         if(!"true".equals(System.getenv("is_leader"))) {
-            String zookeeperServer = System.getenv("node_address") + ":2181";
+            String zookeeperServer = System.getenv("node_address") + ":2181" + ":" + System.getenv("node_id");
             registerMember(zookeeperServer);
         } else {
             log.info("This node is the leader, not registering with ZooKeeper");

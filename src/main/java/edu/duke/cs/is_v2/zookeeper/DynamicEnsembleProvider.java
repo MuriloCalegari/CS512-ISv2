@@ -51,6 +51,9 @@ public class DynamicEnsembleProvider implements EnsembleProvider {
 
             for (String nodeName : ensembleNodeNames) {
                 String nodeData = new String(coordinatorClient.getData().forPath(ENSEMBLE_PATH + "/" + nodeName));
+
+                log.info("Node data: {}", nodeData);
+
                 String[] parts = nodeData.split(":");
 
                 Node node = new Node(Integer.parseInt(parts[2]), parts[0]);
