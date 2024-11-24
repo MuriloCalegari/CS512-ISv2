@@ -1,5 +1,9 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="IsV2Application" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+    <envs>
+      <env name="node_address" value="vcm-44535.vm.duke.edu" />
+      <env name="node_id" value="3" />
+    </envs>
     <option name="ALTERNATIVE_JRE_PATH" value="openjdk-21" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <module name="is-v2.main" />

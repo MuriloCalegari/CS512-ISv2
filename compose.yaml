@@ -38,8 +38,8 @@ services:
     image: zookeeper:3.7
     hostname: follower
     environment:
-      ZOO_MY_ID: 3
-      ZOO_SERVERS: "server.1=vcm-43196.vm.duke.edu:2888:3888;2181 server.2=vcm-43196.vm.duke.edu:2889:3889;2182 server.3=vcm-44535.vm.duke.edu:2888:3888:observer;2181"
+      ZOO_MY_ID: ${node_id}
+      ZOO_SERVERS: "server.1=vcm-43196.vm.duke.edu:2888:3888;2181 server.2=vcm-43196.vm.duke.edu:2889:3889;2182 server.${node_id}=${node_address}:2888:3888:observer;2181"
       ZOO_CFG_EXTRA: "reconfigEnabled=true standaloneEnabled=false skipACL=yes"
 #      Set this follower as an observer
     ports:
@@ -49,14 +49,16 @@ services:
     network_mode: host
 
   url-shortener:
-    build: .
-    depends_on:
-      - coordinator1
-      - coordinator2
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "10000:10000"
     environment:
       - SPRING_PROFILES_ACTIVE=default
+      - node_address=${node_address}
+      - node_id=${node_id}
+      - is_leader=${is_leader}
 
 #networks:
 #  zk_net:

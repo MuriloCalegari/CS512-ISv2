@@ -1,0 +1,30 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Follower + Spring, Bruno VCM" type="docker-deploy" factoryName="docker-compose.yml" server-name="Docker_VCM_Bruno">
+    <deployment type="docker-compose.yml">
+      <settings>
+        <option name="envFilePath" value="" />
+        <option name="envVars">
+          <list>
+            <DockerEnvVarImpl>
+              <option name="name" value="node_address" />
+              <option name="value" value="vcm-44535.vm.duke.edu" />
+            </DockerEnvVarImpl>
+            <DockerEnvVarImpl>
+              <option name="name" value="node_id" />
+              <option name="value" value="3" />
+            </DockerEnvVarImpl>
+          </list>
+        </option>
+        <option name="commandLineOptions" value="--build" />
+        <option name="services">
+          <list>
+            <option value="follower" />
+            <option value="url-shortener" />
+          </list>
+        </option>
+        <option name="sourceFilePath" value="compose.yaml" />
+      </settings>
+    </deployment>
+    <method v="2" />
+  </configuration>
+</component>

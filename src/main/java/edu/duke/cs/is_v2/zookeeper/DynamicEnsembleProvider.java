@@ -53,8 +53,7 @@ public class DynamicEnsembleProvider implements EnsembleProvider {
                 String nodeData = new String(coordinatorClient.getData().forPath(ENSEMBLE_PATH + "/" + nodeName));
                 String[] parts = nodeData.split(":");
 
-                // TODO dynamically retrieve or genetare Id
-                Node node = new Node(3, parts[0]);
+                Node node = new Node(Integer.parseInt(parts[2]), parts[0]);
 
                 // Make sure that the List contains no duplicates
                 // Sometimes ZK hasn't deleted the ephemeral node yet

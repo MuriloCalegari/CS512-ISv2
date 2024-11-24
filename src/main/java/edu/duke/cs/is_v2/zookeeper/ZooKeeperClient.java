@@ -30,8 +30,7 @@ public class ZooKeeperClient {
     private final CuratorFramework curator;
 
     @Autowired
-    public ZooKeeperClient(@Value("${zookeeper.coordinator_address}") String coordinatorAddress,
-                           @Value("${zookeeper.server_to_manage}") String zookeeperServer) {
+    public ZooKeeperClient(@Value("${zookeeper.coordinator_address}") String coordinatorAddress) {
         // Initialize Curator with DynamicEnsembleProvider
 
         DynamicEnsembleProvider ensembleProvider = new DynamicEnsembleProvider(coordinatorAddress);
@@ -64,7 +63,14 @@ public class ZooKeeperClient {
             throw new RuntimeException(e);
         }
 
-        registerMember(zookeeperServer);
+
+        // We don't need to register the leader
+        if(!"true".equals(System.getenv("is_leader"))) {
+            String zookeeperServer = System.getenv("node_address") + ":2181";
+            registerMember(zookeeperServer);
+        } else {
+            log.info("This node is the leader, not registering with ZooKeeper");
+        }
     }
 
 //Specifying the client port
@@ -103,7 +109,7 @@ public class ZooKeeperClient {
             while(netInterface.hasMoreElements()) {
                 InetAddress inetAddress = netInterface.nextElement();
                 if(inetAddress instanceof Inet4Address) {
-                    hostAddress = inetAddress.getHostAddress() + ":" + port;;
+                    hostAddress = "%s:%s:%s".formatted(inetAddress.getHostAddress(), port, System.getenv("node_id"));
                     log.info("Registering this client with address: {}", hostAddress);
                     registerMember(hostAddress);
                 }

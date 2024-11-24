@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="All VMs" type="CompoundRunConfigurationType">
+    <toRun name="Coordinator, + Spring Murilo VCM" type="docker-deploy" />
+    <toRun name="Follower + Spring, Bruno VCM" type="docker-deploy" />
+    <toRun name="Follower + Spring, David VCM" type="docker-deploy" />
+    <method v="2" />
+  </configuration>
+</component>
